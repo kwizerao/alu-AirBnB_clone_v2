@@ -1,26 +1,29 @@
 #!/usr/bin/python3
 """deploy web static"""
-from fabric.api import run, env, put
-from os.path import exists
-env.hosts = ['3.83.244.201', '54.196.238.81']
+from fabric import task
+from fabric.api import env, put, run
 
-
+@task
 def do_deploy(archive_path):
-    """deploy web static"""
+    """Deploys an archive to the web servers."""
+
     if not exists(archive_path):
         return False
-    try:
-        file_name = archive_path.split("/")[-1]
-        name = file_name.split(".")[0]
-        path_name = "/data/web_static/releases/" + name
-        put(archive_path, "/tmp/")
-        run("mkdir -p {}/".format(path_name))
-        run('tar -xzf /tmp/{} -C {}/'.format(file_name, path_name))
-        run("rm /tmp/{}".format(file_name))
-        run("mv {}/web_static/* {}".format(path_name, path_name))
-        run("rm -rf {}/web_static".format(path_name))
-        run('rm -rf /data/web_static/current')
-        run('ln -s {}/ /data/web_static/current'.format(path_name))
-        return True
-    except Exception:
-        return False
+
+    put(archive_path, '/tmp/')
+    run('tar -xzf /tmp/{} -C /data/web_static/releases/'.format(archive_path.split('/')[-1]))
+    run('rm /tmp/{}'.format(archive_path))
+    run('rm -rf /data/web_static/current')
+    run('ln -s /data/web_static/releases/{} /data/web_static/current'.format(archive_path.split('/')[-1]))
+
+    return True
+
+if __name__ == '__main__':
+    env.hosts = ['3.83.244.201', '54.196.238.81']
+    env.user = 'username'
+    env.key_file = 'path/to/key_file'
+
+    if do_deploy('archive.tgz'):
+        print('Deployment successful!')
+    else:
+        print('Deployment failed!')
